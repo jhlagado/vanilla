@@ -26,11 +26,11 @@ const defineRoutes = (routes) => {
     };
   });
   return (url) => {
-    for (const { regExp, value, pattern } of routeList) {
+    for (const { value, regExp, namedParams, pattern } of routeList) {
       const result = regExp.exec(url);
       if (result) {
         const params = result.slice(1, -1).reduce(function (acc, val, index) {
-          if (val) acc[route.namedParams[index]] = val;
+          if (val) acc[namedParams[index]] = val;
           return acc;
         }, {});
         return {
@@ -64,23 +64,45 @@ function isImage(fetchRequest) {
   return fetchRequest.method === "GET" && fetchRequest.destination === "image";
 }
 
+let matcher;
 self.addEventListener("fetch", (e) => {
-  const matcher = createMatcher({
-    "/": homePage,
-    "/courses": courseListingPage,
-    "/courses/:id": courseDetailPage,
-    "/*": notFoundPage,
-  });
+  if (!matcher) {
+    matcher = defineRoutes({
+      "/contacts": (request, { params, url }) =>
+        new Response(
+          `list ${request.method} ${JSON.stringify(params)}, ${url}`
+        ),
+      "/contacts/:id": (request, { params, url }) =>
+        new Response(
+          `item ${request.method} ${JSON.stringify(params)}, ${url}`
+        ),
+      //   "/*": ({ value, params, url, pattern }) =>
+      //     new Response("not found ", value, params, url, pattern),
+    });
+  }
 
   const request = e.request;
-  console.log("Fetching...", request.url);
-  let res = null;
-  if (isImage(request)) {
-    res = fetch("/broken.png");
-  } else if (request.url === "http://localhost:5173/x.html") {
-    res = new Response("xxx12345");
-  } else {
-    res = fetch(request);
+
+  let response = null;
+
+  if (request.headers.get("Accept").includes("text/html")) {
+    const { pathname } = new URL(request.url);
+    console.log("Fetching HTML ", request.method, pathname);
+    const match = matcher(pathname);
+    if (match) response = match.value(request, match);
   }
-  e.respondWith(res);
+
+  if (isImage(request)) {
+    response = fetch("/broken.png");
+  }
+
+  if (!response) {
+    response = fetch(request);
+  }
+
+  e.respondWith(response);
 });
+
+// if (request.headers.get('Accept').includes('text/html')) {
+// if (request.headers.get('Accept').includes('text/css') || request.headers.get('Accept').includes('text/javascript')) {
+// if (request.headers.get('Accept').includes('image') || request.url.includes('your-web-font')) {
