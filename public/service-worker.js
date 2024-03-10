@@ -68,23 +68,27 @@ let matcher;
 self.addEventListener("fetch", (e) => {
   if (!matcher) {
     matcher = defineRoutes({
-      "/contacts": (request, { params, url }) =>
-        new Response(
-          `list ${request.method} ${JSON.stringify(params)}, ${url}`
-        ),
+      "/contacts": async (request, { params, url }) => {
+        const body =
+          request.method === "POST"
+            ? Object.fromEntries((await request.formData()).entries())
+            : "<none>";
+
+        return new Response(
+          `list ${request.method} ${JSON.stringify(
+            params
+          )}, ${url} ${JSON.stringify(body)}`
+        );
+      },
       "/contacts/:id": (request, { params, url }) =>
         new Response(
           `item ${request.method} ${JSON.stringify(params)}, ${url}`
         ),
-      //   "/*": ({ value, params, url, pattern }) =>
-      //     new Response("not found ", value, params, url, pattern),
+      "/*": () => null,
     });
   }
-
-  const request = e.request;
-
+  const { request } = e;
   let response = null;
-
   if (request.headers.get("Accept").includes("text/html")) {
     const { pathname } = new URL(request.url);
     console.log("Fetching HTML ", request.method, pathname);
