@@ -1,12 +1,12 @@
 import "./style.css";
 import viteLogo from "/vite.svg";
+import { serviceWorkerFile } from "virtual:vite-plugin-service-worker";
 
-const run = async () => {
-  await navigator.serviceWorker.register("service-worker.js", {
-    scope: "./",
-  });
-  await navigator.serviceWorker.ready;
-  document.querySelector<HTMLDivElement>("#app")!.innerHTML = `
+navigator.serviceWorker.register(serviceWorkerFile, {
+  type: "module",
+});
+
+document.querySelector<HTMLDivElement>("#app")!.innerHTML = `
   <div>
   <iframe src="/contacts"></iframe>
   <iframe src="/contacts/1"></iframe>
@@ -19,5 +19,3 @@ const run = async () => {
   <a href="https://vitejs.dev" target="_blank">
   </div>
   `;
-};
-run();
